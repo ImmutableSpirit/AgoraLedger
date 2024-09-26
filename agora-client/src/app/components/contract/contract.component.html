@@ -1,0 +1,16 @@
+<div class="container">
+    <h1>View Smart Contract</h1>
+    <form>
+      <div class="form-group">
+        <label for="contractAddress">Contract Address</label>
+        <input type="text" id="contractAddress" class="form-control" placeholder="Enter contract address">
+      </div>
+      <button type="button" class="btn btn-primary" (click)="viewContract()">View Contract</button>
+    </form>
+    
+    <div *ngIf="contractData" class="contract-details">
+      <h2>Contract Details</h2>
+      <pre>{{ contractData | json }}</pre>
+    </div>
+  </div>
+  

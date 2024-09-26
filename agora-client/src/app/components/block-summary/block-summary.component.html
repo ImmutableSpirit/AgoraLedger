@@ -1,0 +1,16 @@
+<div class="block-summary" *ngIf="blockData">
+    <h2>Block Summary</h2>
+    <p><strong>Block Number:</strong> {{ blockData.blockNumber }}</p>
+    <p><strong>Timestamp:</strong> {{ blockData.timestamp | date:'medium' }}</p>
+  
+    <h3>Transactions</h3>
+    <div *ngIf="blockData.transactions?.etherTransfers?.length">
+      <div *ngFor="let transaction of blockData.transactions.etherTransfers" class="transaction">
+        <p><strong>From:</strong> {{ transaction.from }}</p>
+        <p><strong>To:</strong> {{ transaction.to }}</p>
+        <p><strong>Value:</strong> {{ transaction.value | number }} ETH</p>
+        <p><strong>Gas Used:</strong> {{ transaction.gas }}</p>
+      </div>
+    </div>
+  </div>
+  
