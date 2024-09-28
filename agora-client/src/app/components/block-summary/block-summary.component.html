@@ -3,7 +3,25 @@
     <p><strong>Block Number:</strong> {{ blockData.blockNumber }}</p>
     <p><strong>Timestamp:</strong> {{ blockData.timestamp | date:'medium' }}</p>
   
-    <h3>Transactions</h3>
+    <div>
+      <h2>Block Summary Chart</h2>
+      <div class="chart-container">
+        <!-- <canvas  id="MyChart" >{{ chart }}</canvas> -->
+        <canvas baseChart 
+          [type]="'pie'" 
+          [data]="chartData"            
+          [options]="chartOptions">
+        </canvas>
+
+        <canvas baseChart 
+          [type]="'pie'" 
+          [data]="gasData"            
+          [options]="gasChartOptions">
+        </canvas>
+      </div>
+    </div>
+
+    <h3>Transactions</h3>    
     <div *ngIf="blockData.transactions?.etherTransfers?.length">
       <div *ngFor="let transaction of blockData.transactions.etherTransfers" class="transaction">
         <p><strong>From:</strong> {{ transaction.from }}</p>

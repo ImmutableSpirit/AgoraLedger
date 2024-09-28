@@ -1,0 +1,14 @@
+.chart-container {
+    display: flex;
+    justify-content: center;  // Centers the chart horizontally
+    align-items: center;      // Centers the chart vertically (if needed)
+    width: 100%;              // Take full width of the parent container
+  }
+  
+  canvas {
+    max-width: 50vw;          // Set the chart to 50% of the viewport width
+    max-height: 50vh;         // Set the chart to 50% of the viewport height
+    width: 100%;              // Ensure the canvas scales responsively
+    height: auto;
+  }
+  
