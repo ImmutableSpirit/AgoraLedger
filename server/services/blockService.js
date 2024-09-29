@@ -1,7 +1,10 @@
 // services/blockService.js
 
 const { Web3 } = require('web3');
-const web3 = new Web3(`https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`);
+require('dotenv').config();
+
+const infuraProjectId = process.env.INFURA_PROJECT_ID;
+const web3 = new Web3(`https://mainnet.infura.io/v3/${infuraProjectId}`);
 
 // Helper function to recursively convert BigInt properties to strings
 const convertBigIntToString = (obj) => {
