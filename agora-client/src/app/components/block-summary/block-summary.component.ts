@@ -15,53 +15,37 @@ import { Chart, ChartOptions, registerables } from 'chart.js';
 export class BlockSummaryComponent implements OnInit {
   blockData: any;
   public chartData: any;
-  public chartOptions = { 
-    responsive: true,
-    plugins: {
-      title: {
-        display: true,
-        text: 'Transactions by Type',  // Set your chart title here
-        font: {
-          size: 18  // Optional: Adjust the font size
-        },
-        padding: {
-          top: 10,   // Optional: Adjust padding
-          bottom: 10
-        }
-      },
-      legend: {
-        position: 'top', // Position of the legend (optional)
-      },
-      tooltip: {
-        enabled: true, // Tooltips enabled
-      }
-    }
-  } as ChartOptions<'pie'>;
-
-  public gasChartOptions = {
-    responsive: true,
-    plugins: {
-      title: {
-        display: true,
-        text: 'Gas Usage by Transaction Type',  // Set your chart title here
-        font: {
-          size: 18  // Optional: Adjust the font size
-        },
-        padding: {
-          top: 10,   // Optional: Adjust padding
-          bottom: 10
-        }
-      },
-      legend: {
-        position: 'top', // Position of the legend (optional)
-      },
-      tooltip: {
-        enabled: true, // Tooltips enabled
-      }
-    }
-  } as ChartOptions<'pie'>;
-
   public gasData: any;
+  public gasCostBreakdownData : any;
+
+  public generateChartOptions(title: string, padding?: { top: number; bottom: number }) {
+    return {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: title,
+          font: {
+            size: 18
+          },
+          ...(padding && { padding })
+        },
+        legend: {
+          position: 'top'
+        },
+        tooltip: {
+          enabled: true
+        }
+      }
+    } as ChartOptions<'pie'>;
+  }
+  
+  
+  public chartOptions = this.generateChartOptions('Transactions by Type');
+  public gasChartOptions = this.generateChartOptions('Gas Usage by Transaction Type');
+  public gasBreakdownChartOptions = this.generateChartOptions('Gas Cost Breakdown by Threshold');
+
+
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object, private http: HttpClient, private cdr: ChangeDetectorRef) {
     Chart.register(...registerables);  // Register Chart.js components
@@ -125,6 +109,49 @@ export class BlockSummaryComponent implements OnInit {
     };
   }
 
+  // Function to categorize gas usage into low, medium, and high thresholds
+  calculateGasBreakdown(transactions: any) {
+    let lowGas = 0, mediumGas = 0, highGas = 0, ultraGas = 0;
+    let lowGasThresh = 50000, medGasThresh = 200000, highGasThresh = 650000;
+
+    const categorizeGas = (transactions: any[]) => {
+      transactions.forEach((tx) => {
+        const gasUsed = (parseFloat(tx.gas) || 0);
+        if (gasUsed < lowGasThresh) {
+          lowGas += 1;
+        } else if (gasUsed >= lowGasThresh && gasUsed < medGasThresh) {
+          mediumGas += 1;
+        } else if (gasUsed >= medGasThresh && gasUsed < highGasThresh) {
+          highGas += 1;
+        } else if (gasUsed >= highGasThresh) {
+          ultraGas += 1;
+        }
+      });
+    };
+
+    // Sum gas usage across all categories
+    categorizeGas(transactions.etherTransfers);
+    categorizeGas(transactions.contractCalls);
+    categorizeGas(transactions.contractCreations);
+
+    // Update the chart data for gas cost thresholds
+    this.gasCostBreakdownData = {
+      datasets: [{
+        data: [
+          lowGas,     // Total low gas usage
+          mediumGas,  // Total medium gas usage
+          highGas,     // Total high gas usage
+          ultraGas
+        ],
+        backgroundColor: ['#4BC0C0', '#FF9F40', '#FF6384', '#36A2EB']
+      }],
+      labels: [`Low Gas (<${lowGasThresh})`, `Medium Gas (${lowGasThresh}-${medGasThresh})`, `High Gas (${medGasThresh}-${highGasThresh})`, `Ultra-High Gas (>${highGasThresh})`]
+    };
+
+    console.log(this.gasCostBreakdownData);
+  }
+
+
   fetchLatestBlockData() {
     let url = 'http://localhost:3000/api/contracts/latest-block';
     let headers = {
@@ -143,6 +170,7 @@ export class BlockSummaryComponent implements OnInit {
 
         this.calculateGasUsageChartData(this.blockData.transactions);
         this.setTransactionDistributionChartData(this.blockData.transactions);
+        this.calculateGasBreakdown(this.blockData.transactions);
 
         // Trigger change detection manually for OnPush strategy
         this.cdr.markForCheck();
