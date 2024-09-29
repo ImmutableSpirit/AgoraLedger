@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy, PLATFORM
 import { HttpClient } from '@angular/common/http';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { BaseChartDirective } from 'ng2-charts'; 
-import { Chart, ChartOptions, registerables } from 'chart.js';
+import { Chart, ChartOptions, ChartType, registerables } from 'chart.js';
 
 @Component({
   selector: 'app-block-summary',
@@ -17,10 +17,12 @@ export class BlockSummaryComponent implements OnInit {
   public chartData: any;
   public gasData: any;
   public gasCostBreakdownData : any;
+  public transactionVolumeChartData  : any;
 
-  public generateChartOptions(title: string, padding?: { top: number; bottom: number }) {
+  public generateChartOptions(title: string, type: ChartType, padding?: { top: number; bottom: number }) {
     return {
       responsive: true,
+      type,
       plugins: {
         title: {
           display: true,
@@ -37,15 +39,14 @@ export class BlockSummaryComponent implements OnInit {
           enabled: true
         }
       }
-    } as ChartOptions<'pie'>;
+    } as ChartOptions<typeof type>;
   }
   
   
-  public chartOptions = this.generateChartOptions('Transactions by Type');
-  public gasChartOptions = this.generateChartOptions('Gas Usage by Transaction Type');
-  public gasBreakdownChartOptions = this.generateChartOptions('Gas Cost Breakdown by Threshold');
-
-
+  public chartOptions = this.generateChartOptions('Transactions by Type', 'pie');
+  public gasChartOptions = this.generateChartOptions('Gas Usage by Transaction Type', 'pie');
+  public gasBreakdownChartOptions = this.generateChartOptions('Gas Cost Breakdown by Threshold', 'pie');
+  public transactionVolumeChartOptions = this.generateChartOptions('Transaction Volume Over Time', 'line');
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object, private http: HttpClient, private cdr: ChangeDetectorRef) {
     Chart.register(...registerables);  // Register Chart.js components
@@ -143,13 +144,20 @@ export class BlockSummaryComponent implements OnInit {
           highGas,     // Total high gas usage
           ultraGas
         ],
-        backgroundColor: ['#4BC0C0', '#FF9F40', '#FF6384', '#36A2EB']
+        backgroundColor: [
+          '#FF3737',  // Red
+          '#FF6955', // Orange-Red
+          '#FFA07A', // Orange-Yellow         
+          '#FFFF00' // Yellow
+        ]
       }],
       labels: [`Low Gas (<${lowGasThresh})`, `Medium Gas (${lowGasThresh}-${medGasThresh})`, `High Gas (${medGasThresh}-${highGasThresh})`, `Ultra-High Gas (>${highGasThresh})`]
     };
 
     console.log(this.gasCostBreakdownData);
   }
+
+  
 
 
   fetchLatestBlockData() {
@@ -161,17 +169,12 @@ export class BlockSummaryComponent implements OnInit {
       this.blockData = data;
       console.log(this.blockData);
 
-      // Categorize transactions by gas usage
-      //const lowGas = this.blockData.transactions.filter((tx: { gas: number; }) => tx.gas < 20000);
-      //const mediumGas = this.blockData.transactions.filter((tx: { gas: number; }) => tx.gas >= 20000 && tx.gas <= 80000);
-      //const highGas = this.blockData.transactions.filter((tx: { gas: number; }) => tx.gas > 80000);
-
       if (this.blockData?.transactions) {
 
         this.calculateGasUsageChartData(this.blockData.transactions);
         this.setTransactionDistributionChartData(this.blockData.transactions);
         this.calculateGasBreakdown(this.blockData.transactions);
-
+        
         // Trigger change detection manually for OnPush strategy
         this.cdr.markForCheck();
       }

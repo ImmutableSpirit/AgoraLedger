@@ -25,6 +25,14 @@
           [options]="gasBreakdownChartOptions">
         </canvas>
       </div>
+
+      <div class="chart-container">
+        <canvas baseChart
+          [type]="'line'"
+          [data]="transactionVolumeChartData"
+          [options]="transactionVolumeChartOptions">
+        </canvas>
+      </div>
     </div>
 
     <h3>Transactions</h3>    
