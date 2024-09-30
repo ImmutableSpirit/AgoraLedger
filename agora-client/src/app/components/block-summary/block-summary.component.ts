@@ -14,6 +14,7 @@ import { Chart, ChartOptions, ChartType, registerables } from 'chart.js';
 })
 export class BlockSummaryComponent implements OnInit {
   blockData: any;
+  recentBlockData: any;
   public chartData: any;
   public gasData: any;
   public gasCostBreakdownData : any;
@@ -55,8 +56,52 @@ export class BlockSummaryComponent implements OnInit {
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
       this.fetchLatestBlockData();
+      this.recentBlockData = this.fetchLastBlocks(7);
     }
   }
+
+  fetchLastBlocks_old(numBlocks: number) {
+    const url = `http://localhost:3000/api/contracts/blocks?numBlocks=${numBlocks}`;
+    return this.http.get(url);
+  }
+
+  fetchLastBlocks(numBlocks: number) {
+    const url = `http://localhost:3000/api/contracts/blocks?numBlocks=${numBlocks}`;
+    return this.http.get(url).subscribe(
+      {
+        next: (data: any) => {
+          this.populateTransactionVolumeChartData(data);
+        },
+        error: error => {
+          console.error('Error fetching last blocks:', error);
+        },
+        complete: () => {
+          // Optional: Handle completion
+          console.log('Request completed.');
+        }
+      }
+    );
+  }
+
+  populateTransactionVolumeChartData(blocks: any[]) {
+    const timestamps = blocks.map(block => new Date(block.timestamp * 1000).toLocaleString());
+    const transactionCounts = blocks.map(block => block.contractCalls.length + block.etherTransfers.length + block.contractCreations.length);
+
+    this.transactionVolumeChartData = {
+      labels: timestamps,
+      datasets: [{
+        label: 'Transaction Volume',
+        data: transactionCounts,
+        fill: false,
+        borderColor: 'rgb(75, 192, 192)',
+        tension: 0.1
+      }]
+    };
+
+    console.log(this.transactionVolumeChartData);
+    this.cdr.markForCheck(); // Trigger change detection
+  }
+  
 
   // Function to calculate total gas usage for transaction categories and set chart data
   calculateGasUsageChartData(transactions: any) {

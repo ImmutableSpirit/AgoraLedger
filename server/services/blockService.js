@@ -31,8 +31,8 @@ const convertBigIntToString = (obj) => {
   
     for (const txHash of transactions) {
       try {
-        const tx = await web3.eth.getTransaction(txHash);
-        const receipt = await web3.eth.getTransactionReceipt(txHash);
+        const tx = await retryWithDelay(() => web3.eth.getTransaction(txHash));
+        const receipt = await retryWithDelay(() => web3.eth.getTransactionReceipt(txHash));
   
         if (receipt.contractAddress || tx.to === null || tx.to === '0x0') {
           categorized.contractCreations.push({
@@ -53,7 +53,7 @@ const convertBigIntToString = (obj) => {
     console.log("# of calls: " + categorized.contractCalls.length);
     console.log("# of transfers: " + categorized.etherTransfers.length);
   
-    return categorized;
+    return convertBigIntToString(categorized);
   };
 
 // Function to categorize transactions
@@ -98,8 +98,51 @@ const getLatestBlockSummary = async () => {
   return {
     blockNumber: block.number.toString(),
     timestamp: block.timestamp.toString(),
-    transactions: convertBigIntToString(categorizedTransactions),
+    transactions: categorizedTransactions,
   };
 };
 
-module.exports = { getLatestBlockSummary };
+// Fetch the last X blocks and categorize their transactions
+const getBlocksSummary = async (numBlocks) => {
+  const latestBlock = await web3.eth.getBlock('latest');
+  const latestBlockNumber = Number(latestBlock.number);
+  const blockPromises = [];
+
+  // Fetch the last X blocks including the latest one
+  for (let i = 0; i < numBlocks; i++) {
+    const blockNumber = latestBlockNumber - i;
+    blockPromises.push(retryWithDelay(() => web3.eth.getBlock(blockNumber, true)));
+  }
+
+  const blocks = await Promise.all(blockPromises);
+  // Reverse the blocks array to have the oldest block first
+  const reversedBlocks = blocks.reverse();
+  
+  // Process each block's transactions and categorize them
+  const blocksSummary = await Promise.all(reversedBlocks.map(async (block) => {
+    const categorizedTransactions = await categorizeTransactions(block.transactions.map(tx => tx.hash));
+
+    return {
+      timestamp: block.timestamp.toString(),
+      contractCalls: categorizedTransactions.contractCalls,
+      etherTransfers: categorizedTransactions.etherTransfers,
+      contractCreations: categorizedTransactions.contractCreations
+    };
+  }));
+
+  return blocksSummary;
+};
+
+// Retry logic with delay
+const retryWithDelay = async (fn, retries = 5, delay = 800) => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries === 0) throw error;
+    console.log(`Retrying in ${delay}ms... (${retries} retries left)`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return retryWithDelay(fn, retries - 1, delay);
+  }
+};
+
+module.exports = { getBlocksSummary, getLatestBlockSummary };
